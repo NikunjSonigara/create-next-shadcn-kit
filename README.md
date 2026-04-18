@@ -1,5 +1,9 @@
 # create-next-shadcn-kit
 
+[![npm version](https://img.shields.io/npm/v/create-next-shadcn-kit.svg?color=cb3837&logo=npm)](https://www.npmjs.com/package/create-next-shadcn-kit)
+[![npm downloads](https://img.shields.io/npm/dm/create-next-shadcn-kit.svg)](https://www.npmjs.com/package/create-next-shadcn-kit)
+[![license](https://img.shields.io/npm/l/create-next-shadcn-kit.svg)](./LICENSE)
+
 > Create a Next.js app with **shadcn/ui** pre-integrated — zero config.
 
 One command, a fresh Next.js project, Tailwind configured, shadcn/ui initialized, and your favorite components already installed. No juggling two CLIs.
@@ -59,11 +63,15 @@ npx create-next-shadcn-kit my-app --pnpm
 ## Development
 
 ```bash
-git clone <this-repo>
+git clone https://github.com/NikunjSonigara/create-next-shadcn-kit.git
 cd create-next-shadcn-kit
 npm install
 node bin/index.js test-app --yes
 ```
+
+## Contributing
+
+Issues and PRs welcome at [github.com/NikunjSonigara/create-next-shadcn-kit](https://github.com/NikunjSonigara/create-next-shadcn-kit).
 
 ## License
 

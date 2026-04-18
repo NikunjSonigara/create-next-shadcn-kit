@@ -11,10 +11,20 @@
         "scaffold",
         "starter",
         "create-next-app",
-        "tailwind"
+        "tailwind",
+        "redux-toolkit",
+        "zustand"
     ],
     "author": "Nikunj Sonigara <nikunjsonigara987@gmail.com>",
     "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/NikunjSonigara/create-next-shadcn-kit.git"
+    },
+    "homepage": "https://github.com/NikunjSonigara/create-next-shadcn-kit#readme",
+    "bugs": {
+        "url": "https://github.com/NikunjSonigara/create-next-shadcn-kit/issues"
+    },
     "type": "module",
     "bin": {
         "create-next-shadcn-kit": "bin/index.js"
