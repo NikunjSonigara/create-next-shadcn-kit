@@ -1,0 +1,39 @@
+{
+    "name": "create-next-shadcn-kit",
+    "version": "0.1.0",
+    "description": "Create a Next.js app with shadcn/ui pre-integrated — zero config.",
+    "keywords": [
+        "nextjs",
+        "next",
+        "shadcn",
+        "shadcn-ui",
+        "cli",
+        "scaffold",
+        "starter",
+        "create-next-app",
+        "tailwind"
+    ],
+    "author": "Nikunj Sonigara <nikunjsonigara987@gmail.com>",
+    "license": "MIT",
+    "type": "module",
+    "bin": {
+        "create-next-shadcn-kit": "bin/index.js"
+    },
+    "files": [
+        "bin",
+        "src",
+        "README.md",
+        "LICENSE"
+    ],
+    "engines": {
+        "node": ">=18.17.0"
+    },
+    "scripts": {
+        "start": "node bin/index.js",
+        "test:local": "node bin/index.js test-app --yes"
+    },
+    "dependencies": {
+        "picocolors": "^1.1.1",
+        "prompts": "^2.4.2"
+    }
+}
