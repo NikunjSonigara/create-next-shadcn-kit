@@ -1,6 +1,6 @@
 {
     "name": "create-next-shadcn-kit",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "description": "Create a Next.js app with shadcn/ui pre-integrated — zero config.",
     "keywords": [
         "nextjs",
