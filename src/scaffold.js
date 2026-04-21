@@ -367,16 +367,6 @@ function installerFor(pm, dev = true) {
     }
 }
 
-function runnerFor(pm) {
-    switch (pm) {
-        case "pnpm":
-            return { cmd: "pnpm", args: ["dlx"] };
-        case "yarn":
-            return { cmd: "yarn", args: ["dlx"] };
-        case "bun":
-            return { cmd: "bunx", args: [] };
-        case "npm":
-        default:
-            return { cmd: "npx", args: [] };
-    }
+function runnerFor(_pm) {
+    return { cmd: "npx", args: [] };
 }

@@ -47,8 +47,8 @@ function devCommand(pm) {
 
 function assertNodeVersion() {
     const major = Number(process.versions.node.split(".")[0]);
-    if (major < 18) {
-        throw new Error(`Node.js 18.17+ is required. You are running ${process.versions.node}.`);
+    if (major < 20) {
+        throw new Error(`Node.js 20+ is required (Next.js 16 requires it). You are running ${process.versions.node}.`);
     }
 }
 

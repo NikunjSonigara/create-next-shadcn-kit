@@ -57,8 +57,9 @@ npx create-next-shadcn-kit my-app --pnpm
 
 ## Requirements
 
-- Node.js **18.17+**
+- Node.js **20+** (Next.js 16 requires it)
 - Network access (to fetch `create-next-app` and `shadcn`)
+- Works with **npm, pnpm, yarn, bun**. All are tested end-to-end.
 
 ## Development
 
