@@ -54,11 +54,14 @@ jobs:
       # Install the CLI's own dependencies.
       - run: npm ci
 
-      # Scaffold a fresh project non-interactively with this package manager.
+      # Scaffold in a fresh dir OUTSIDE the checkout, so create-next-app git-inits
+      # the new project normally (inside the repo checkout it would skip git init,
+      # which breaks the Husky setup). This also mirrors real-world usage.
       - name: Scaffold app
-        run: node bin/index.js demo-app --yes --${{ matrix.pm }}
+        working-directory: ${{ runner.temp }}
+        run: node "$GITHUB_WORKSPACE/bin/index.js" demo-app --yes --${{ matrix.pm }}
 
       # Prove the generated project compiles and builds.
       - name: Build generated app
-        working-directory: demo-app
+        working-directory: ${{ runner.temp }}/demo-app
         run: ${{ matrix.pm }} run build
