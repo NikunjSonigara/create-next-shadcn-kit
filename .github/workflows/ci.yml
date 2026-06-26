@@ -51,6 +51,14 @@ jobs:
         if: matrix.pm == 'bun'
         uses: oven-sh/setup-bun@v2
 
+      # CI runners have no global git identity. Without one, create-next-app's
+      # initial commit fails and it rolls back the git init, leaving the project
+      # with no .git — which then breaks the Husky setup. Configure one first.
+      - name: Configure git identity
+        run: |
+          git config --global user.email "ci@example.com"
+          git config --global user.name "CI"
+
       # Install the CLI's own dependencies.
       - run: npm ci
 
