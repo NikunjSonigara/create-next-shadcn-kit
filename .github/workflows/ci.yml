@@ -37,9 +37,12 @@ jobs:
         pm: [npm, pnpm, yarn, bun]
     steps:
       - uses: actions/checkout@v4
+      # Node 22: the generated app's toolchain now requires it — pnpm 11's binary
+      # needs node:sqlite (Node >=22.13) and lint-staged pulls in listr2, which
+      # also requires Node >=22.13 (Yarn Classic enforces this strictly).
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Enable pnpm
         if: matrix.pm == 'pnpm'
