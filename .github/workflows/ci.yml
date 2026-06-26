@@ -70,6 +70,11 @@ jobs:
       # which breaks the Husky setup). This also mirrors real-world usage.
       - name: Scaffold app
         working-directory: ${{ runner.temp }}
+        # pnpm 11 defaults strictDepBuilds=true, so dependency build scripts that
+        # aren't approved (sharp, unrs-resolver via shadcn) become a hard error in
+        # the non-interactive scaffold. Downgrade it back to a warning.
+        env:
+          pnpm_config_strict_dep_builds: "false"
         run: node "$GITHUB_WORKSPACE/bin/index.js" demo-app --yes --${{ matrix.pm }}
 
       # Prove the generated project compiles and builds.
