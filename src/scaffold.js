@@ -66,6 +66,15 @@ function storeDirFor(projectPath, config) {
     return config.srcDir ? path.join(projectPath, "src", "store") : path.join(projectPath, "store");
 }
 
+// Turn a tsconfig-style import alias pattern (e.g. "@/*", "~/*") into the
+// prefix used in import statements ("@", "~"). Falls back to "@" if empty.
+export function aliasPrefixFor(importAlias) {
+    const prefix = String(importAlias || "@/*")
+        .replace(/\*$/, "")
+        .replace(/\/$/, "");
+    return prefix || "@";
+}
+
 async function setupRedux(projectPath, config) {
     console.log();
     console.log(pc.cyan("◆") + " Setting up Redux Toolkit...");
@@ -170,11 +179,12 @@ export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
     }
 
     const appDir = appDirFor(projectPath, config);
+    const storeImport = `${aliasPrefixFor(config.importAlias)}/store`;
     const providers = ts
         ? `"use client";
 
 import { Provider } from "react-redux";
-import { store } from "@/store";
+import { store } from "${storeImport}";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return <Provider store={store}>{children}</Provider>;
@@ -183,7 +193,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         : `"use client";
 
 import { Provider } from "react-redux";
-import { store } from "@/store";
+import { store } from "${storeImport}";
 
 export function Providers({ children }) {
   return <Provider store={store}>{children}</Provider>;
