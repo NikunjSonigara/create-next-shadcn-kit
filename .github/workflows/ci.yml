@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Fast unit tests across supported Node versions.
+  unit:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['20', '22']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci
+      - run: npm test
+
+  # End-to-end: scaffold a real app with each package manager and build it.
+  # This is what backs the README's "tested end-to-end" claim.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        pm: [npm, pnpm, yarn, bun]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Enable pnpm
+        if: matrix.pm == 'pnpm'
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Enable bun
+        if: matrix.pm == 'bun'
+        uses: oven-sh/setup-bun@v2
+
+      # Install the CLI's own dependencies.
+      - run: npm ci
+
+      # Scaffold a fresh project non-interactively with this package manager.
+      - name: Scaffold app
+        run: node bin/index.js demo-app --yes --${{ matrix.pm }}
+
+      # Prove the generated project compiles and builds.
+      - name: Build generated app
+        working-directory: demo-app
+        run: ${{ matrix.pm }} run build
