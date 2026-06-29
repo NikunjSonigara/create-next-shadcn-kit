@@ -7,6 +7,14 @@ export async function scaffold(config) {
     const cwd = process.cwd();
     const projectPath = path.resolve(cwd, config.projectName);
 
+    // pnpm 10+/11 defaults strictDepBuilds=true, so unapproved dependency build
+    // scripts (e.g. sharp, unrs-resolver pulled in by shadcn) abort the install
+    // in a non-interactive run. Downgrade it to a warning for all child pnpm
+    // processes; respect an explicit override if the user already set one.
+    if (config.packageManager === "pnpm" && process.env.pnpm_config_strict_dep_builds === undefined) {
+        process.env.pnpm_config_strict_dep_builds = "false";
+    }
+
     if (fs.existsSync(projectPath) && fs.readdirSync(projectPath).length > 0) {
         throw new Error(`Directory "${config.projectName}" already exists and is not empty.`);
     }
@@ -303,6 +311,14 @@ async function setupHusky(projectPath, config) {
     };
     delete pkg["lint-staged"];
     fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");
+
+    // Husky needs this project to be its own git repository. create-next-app
+    // skips git init when nested inside an existing repo, and rolls it back if it
+    // can't make the initial commit (e.g. no git identity configured). Ensure one
+    // so the hook setup below doesn't fail.
+    if (!fs.existsSync(path.join(projectPath, ".git"))) {
+        await run("git", ["init"], { cwd: projectPath });
+    }
 
     const runner = runnerFor(config.packageManager);
     await run(runner.cmd, [...runner.args, "husky", "install"], {
