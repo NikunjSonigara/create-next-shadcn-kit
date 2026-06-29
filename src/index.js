@@ -45,10 +45,22 @@ function devCommand(pm) {
     return `${pm} dev`;
 }
 
+// Minimum Node supported by the generated project's toolchain. Husky's
+// lint-staged pulls in listr2 (Node >=22.13) and pnpm 11's binary needs
+// node:sqlite (Node >=22.13), so the practical floor is Node 22.
+export const MIN_NODE_MAJOR = 22;
+
+export function isSupportedNode(version) {
+    const major = Number(String(version).replace(/^v/, "").split(".")[0]);
+    return Number.isFinite(major) && major >= MIN_NODE_MAJOR;
+}
+
 function assertNodeVersion() {
-    const major = Number(process.versions.node.split(".")[0]);
-    if (major < 20) {
-        throw new Error(`Node.js 20+ is required (Next.js 16 requires it). You are running ${process.versions.node}.`);
+    if (!isSupportedNode(process.versions.node)) {
+        throw new Error(
+            `Node.js ${MIN_NODE_MAJOR}+ is required (Next.js 16 and the pnpm/lint-staged toolchain need it). ` +
+                `You are running ${process.versions.node}.`
+        );
     }
 }
 
