@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { parseArgs, isValidProjectName } from "../src/utils.js";
-import { aliasPrefixFor, writePnpmBuildConfig } from "../src/scaffold.js";
+import { aliasPrefixFor, writePnpmBuildConfig, readTemplate } from "../src/scaffold.js";
 import { isSupportedNode, MIN_NODE_MAJOR } from "../src/index.js";
 
 test("positional project name is captured", () => {
@@ -118,6 +118,24 @@ test("writePnpmBuildConfig overwrites create-next-app's placeholder without dupl
     } finally {
         fs.rmSync(dir, { recursive: true, force: true });
     }
+});
+
+test("readTemplate returns the TS/JS Redux templates", () => {
+    const indexTs = readTemplate("redux", "index.ts");
+    assert.match(indexTs, /configureStore/);
+    assert.match(indexTs, /export type RootState/);
+
+    const indexJs = readTemplate("redux", "index.js");
+    assert.match(indexJs, /configureStore/);
+    assert.doesNotMatch(indexJs, /RootState/); // JS variant has no type exports
+});
+
+test("redux providers template uses default @/store and is alias-substitutable", () => {
+    const providers = readTemplate("redux", "providers.tsx");
+    assert.match(providers, /from "@\/store"/);
+    const rewritten = providers.replaceAll('"@/store"', '"~/store"');
+    assert.match(rewritten, /from "~\/store"/);
+    assert.doesNotMatch(rewritten, /"@\/store"/);
 });
 
 test("aliasPrefixFor derives the import prefix", () => {

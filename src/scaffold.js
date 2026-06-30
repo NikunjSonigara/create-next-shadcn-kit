@@ -1,7 +1,16 @@
 import path from "node:path";
 import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 import pc from "picocolors";
 import { run } from "./utils.js";
+
+const TEMPLATES_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "templates");
+
+// Read a template file shipped with the package. Templates are real, lintable
+// source files; callers apply any substitutions (e.g. the import alias).
+export function readTemplate(...segments) {
+    return fs.readFileSync(path.join(TEMPLATES_DIR, ...segments), "utf8");
+}
 
 export async function scaffold(config) {
     const cwd = process.cwd();
@@ -102,115 +111,17 @@ async function setupRedux(projectPath, config) {
     const storeExt = ts ? "ts" : "js";
     const compExt = ts ? "tsx" : "js";
 
-    const storeIndex = ts
-        ? `import { configureStore } from "@reduxjs/toolkit";
-import counterReducer from "./counterSlice";
-
-export const store = configureStore({
-  reducer: {
-    counter: counterReducer,
-  },
-});
-
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
-`
-        : `import { configureStore } from "@reduxjs/toolkit";
-import counterReducer from "./counterSlice";
-
-export const store = configureStore({
-  reducer: {
-    counter: counterReducer,
-  },
-});
-`;
-    fs.writeFileSync(path.join(storeDir, `index.${storeExt}`), storeIndex);
-
-    const counterSlice = ts
-        ? `import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-
-interface CounterState {
-  value: number;
-}
-
-const initialState: CounterState = { value: 0 };
-
-const counterSlice = createSlice({
-  name: "counter",
-  initialState,
-  reducers: {
-    increment: (state) => {
-      state.value += 1;
-    },
-    decrement: (state) => {
-      state.value -= 1;
-    },
-    incrementByAmount: (state, action: PayloadAction<number>) => {
-      state.value += action.payload;
-    },
-  },
-});
-
-export const { increment, decrement, incrementByAmount } = counterSlice.actions;
-export default counterSlice.reducer;
-`
-        : `import { createSlice } from "@reduxjs/toolkit";
-
-const initialState = { value: 0 };
-
-const counterSlice = createSlice({
-  name: "counter",
-  initialState,
-  reducers: {
-    increment: (state) => {
-      state.value += 1;
-    },
-    decrement: (state) => {
-      state.value -= 1;
-    },
-    incrementByAmount: (state, action) => {
-      state.value += action.payload;
-    },
-  },
-});
-
-export const { increment, decrement, incrementByAmount } = counterSlice.actions;
-export default counterSlice.reducer;
-`;
-    fs.writeFileSync(path.join(storeDir, `counterSlice.${storeExt}`), counterSlice);
+    fs.writeFileSync(path.join(storeDir, `index.${storeExt}`), readTemplate("redux", `index.${storeExt}`));
+    fs.writeFileSync(path.join(storeDir, `counterSlice.${storeExt}`), readTemplate("redux", `counterSlice.${storeExt}`));
 
     if (ts) {
-        const hooks = `import { useDispatch, useSelector } from "react-redux";
-import type { TypedUseSelectorHook } from "react-redux";
-import type { RootState, AppDispatch } from "./index";
-
-export const useAppDispatch: () => AppDispatch = useDispatch;
-export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
-`;
-        fs.writeFileSync(path.join(storeDir, "hooks.ts"), hooks);
+        fs.writeFileSync(path.join(storeDir, "hooks.ts"), readTemplate("redux", "hooks.ts"));
     }
 
     const appDir = appDirFor(projectPath, config);
+    // Templates import from the default "@/store"; rewrite to the chosen alias.
     const storeImport = `${aliasPrefixFor(config.importAlias)}/store`;
-    const providers = ts
-        ? `"use client";
-
-import { Provider } from "react-redux";
-import { store } from "${storeImport}";
-
-export function Providers({ children }: { children: React.ReactNode }) {
-  return <Provider store={store}>{children}</Provider>;
-}
-`
-        : `"use client";
-
-import { Provider } from "react-redux";
-import { store } from "${storeImport}";
-
-export function Providers({ children }) {
-  return <Provider store={store}>{children}</Provider>;
-}
-`;
+    const providers = readTemplate("redux", `providers.${compExt}`).replaceAll('"@/store"', `"${storeImport}"`);
     fs.writeFileSync(path.join(appDir, `providers.${compExt}`), providers);
 
     patchLayoutWithProviders(appDir, ts);
