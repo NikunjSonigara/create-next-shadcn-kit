@@ -1,7 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { parseArgs, isValidProjectName } from "../src/utils.js";
-import { aliasPrefixFor } from "../src/scaffold.js";
+import { aliasPrefixFor, writePnpmBuildConfig } from "../src/scaffold.js";
 import { isSupportedNode, MIN_NODE_MAJOR } from "../src/index.js";
 
 test("positional project name is captured", () => {
@@ -90,6 +93,31 @@ test("isSupportedNode enforces the Node 22+ floor", () => {
     assert.equal(isSupportedNode("20.20.2"), false);
     assert.equal(isSupportedNode("18.19.0"), false);
     assert.equal(isSupportedNode("garbage"), false);
+});
+
+test("writePnpmBuildConfig overwrites create-next-app's placeholder without duplicate keys", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "cns-pnpm-"));
+    try {
+        // Simulate the placeholder file create-next-app's pnpm install leaves behind.
+        const wsPath = path.join(dir, "pnpm-workspace.yaml");
+        fs.writeFileSync(
+            wsPath,
+            "allowBuilds:\n  sharp: set this to true or false\n  unrs-resolver: set this to true or false\nignoredBuiltDependencies:\n  - sharp\n  - unrs-resolver\n"
+        );
+
+        writePnpmBuildConfig(dir);
+        const out = fs.readFileSync(wsPath, "utf8");
+
+        // Exactly one allowBuilds key (the duplicate caused the YAML parse error).
+        assert.equal(out.match(/^allowBuilds:/gm)?.length, 1);
+        assert.match(out, /^strictDepBuilds: false$/m);
+        assert.match(out, /sharp: false/);
+        assert.match(out, /unrs-resolver: false/);
+        // No leftover placeholder text.
+        assert.doesNotMatch(out, /set this to true or false/);
+    } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+    }
 });
 
 test("aliasPrefixFor derives the import prefix", () => {

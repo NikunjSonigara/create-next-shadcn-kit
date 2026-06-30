@@ -39,6 +39,10 @@ export async function scaffold(config) {
 
     await run("npx", cnaArgs);
 
+    if (config.packageManager === "pnpm") {
+        writePnpmBuildConfig(projectPath);
+    }
+
     console.log();
     console.log(pc.cyan("◆") + " Initializing shadcn/ui...");
     console.log();
@@ -377,6 +381,31 @@ ${hookCmd}
         "",
     ].join("\n");
     fs.writeFileSync(path.join(projectPath, ".prettierignore"), prettierIgnore);
+}
+
+// pnpm 11 defaults strictDepBuilds=true, so a later `pnpm install` in the
+// generated project hard-fails (ERR_PNPM_IGNORED_BUILDS) on unapproved
+// dependency build scripts that Next.js/shadcn pull in (sharp, unrs-resolver).
+// create-next-app's own pnpm install already drops a pnpm-workspace.yaml here
+// with placeholder values ("set this to true or false") that are meant to be
+// edited — so we replace it with an explicit, valid decision:
+//   - allowBuilds: <pkg>: false  -> a deliberate "don't run this build script"
+//     (the deps ship prebuilt binaries; nothing untrusted is executed).
+//   - strictDepBuilds: false      -> catch-all so a future native dependency
+//     can't reintroduce the hard install failure.
+// We overwrite rather than merge: this file's only role in a single-app project
+// is these settings, and appending risks duplicate keys (invalid YAML). pnpm 11
+// reads these from pnpm-workspace.yaml, not .npmrc.
+export function writePnpmBuildConfig(projectPath) {
+    const wsPath = path.join(projectPath, "pnpm-workspace.yaml");
+    const contents = `# Let \`pnpm install\` succeed without failing on dependency build scripts.
+# See https://pnpm.io/settings#strictdepbuilds
+strictDepBuilds: false
+allowBuilds:
+  sharp: false
+  unrs-resolver: false
+`;
+    fs.writeFileSync(wsPath, contents);
 }
 
 function installerFor(pm, dev = true) {
