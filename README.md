@@ -74,6 +74,10 @@ node bin/index.js test-app --yes
 
 Issues and PRs welcome at [github.com/NikunjSonigara/create-next-shadcn-kit](https://github.com/NikunjSonigara/create-next-shadcn-kit).
 
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for release history.
+
 ## License
 
 MIT
