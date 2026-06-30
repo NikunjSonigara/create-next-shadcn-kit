@@ -1,7 +1,16 @@
 import path from "node:path";
 import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 import pc from "picocolors";
 import { run } from "./utils.js";
+
+const TEMPLATES_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "templates");
+
+// Read a template file shipped with the package. Templates are real, lintable
+// source files; callers apply any substitutions (e.g. the import alias).
+export function readTemplate(...segments) {
+    return fs.readFileSync(path.join(TEMPLATES_DIR, ...segments), "utf8");
+}
 
 export async function scaffold(config) {
     const cwd = process.cwd();
@@ -102,115 +111,17 @@ async function setupRedux(projectPath, config) {
     const storeExt = ts ? "ts" : "js";
     const compExt = ts ? "tsx" : "js";
 
-    const storeIndex = ts
-        ? `import { configureStore } from "@reduxjs/toolkit";
-import counterReducer from "./counterSlice";
-
-export const store = configureStore({
-  reducer: {
-    counter: counterReducer,
-  },
-});
-
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
-`
-        : `import { configureStore } from "@reduxjs/toolkit";
-import counterReducer from "./counterSlice";
-
-export const store = configureStore({
-  reducer: {
-    counter: counterReducer,
-  },
-});
-`;
-    fs.writeFileSync(path.join(storeDir, `index.${storeExt}`), storeIndex);
-
-    const counterSlice = ts
-        ? `import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-
-interface CounterState {
-  value: number;
-}
-
-const initialState: CounterState = { value: 0 };
-
-const counterSlice = createSlice({
-  name: "counter",
-  initialState,
-  reducers: {
-    increment: (state) => {
-      state.value += 1;
-    },
-    decrement: (state) => {
-      state.value -= 1;
-    },
-    incrementByAmount: (state, action: PayloadAction<number>) => {
-      state.value += action.payload;
-    },
-  },
-});
-
-export const { increment, decrement, incrementByAmount } = counterSlice.actions;
-export default counterSlice.reducer;
-`
-        : `import { createSlice } from "@reduxjs/toolkit";
-
-const initialState = { value: 0 };
-
-const counterSlice = createSlice({
-  name: "counter",
-  initialState,
-  reducers: {
-    increment: (state) => {
-      state.value += 1;
-    },
-    decrement: (state) => {
-      state.value -= 1;
-    },
-    incrementByAmount: (state, action) => {
-      state.value += action.payload;
-    },
-  },
-});
-
-export const { increment, decrement, incrementByAmount } = counterSlice.actions;
-export default counterSlice.reducer;
-`;
-    fs.writeFileSync(path.join(storeDir, `counterSlice.${storeExt}`), counterSlice);
+    fs.writeFileSync(path.join(storeDir, `index.${storeExt}`), readTemplate("redux", `index.${storeExt}`));
+    fs.writeFileSync(path.join(storeDir, `counterSlice.${storeExt}`), readTemplate("redux", `counterSlice.${storeExt}`));
 
     if (ts) {
-        const hooks = `import { useDispatch, useSelector } from "react-redux";
-import type { TypedUseSelectorHook } from "react-redux";
-import type { RootState, AppDispatch } from "./index";
-
-export const useAppDispatch: () => AppDispatch = useDispatch;
-export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
-`;
-        fs.writeFileSync(path.join(storeDir, "hooks.ts"), hooks);
+        fs.writeFileSync(path.join(storeDir, "hooks.ts"), readTemplate("redux", "hooks.ts"));
     }
 
     const appDir = appDirFor(projectPath, config);
+    // Templates import from the default "@/store"; rewrite to the chosen alias.
     const storeImport = `${aliasPrefixFor(config.importAlias)}/store`;
-    const providers = ts
-        ? `"use client";
-
-import { Provider } from "react-redux";
-import { store } from "${storeImport}";
-
-export function Providers({ children }: { children: React.ReactNode }) {
-  return <Provider store={store}>{children}</Provider>;
-}
-`
-        : `"use client";
-
-import { Provider } from "react-redux";
-import { store } from "${storeImport}";
-
-export function Providers({ children }) {
-  return <Provider store={store}>{children}</Provider>;
-}
-`;
+    const providers = readTemplate("redux", `providers.${compExt}`).replaceAll('"@/store"', `"${storeImport}"`);
     fs.writeFileSync(path.join(appDir, `providers.${compExt}`), providers);
 
     patchLayoutWithProviders(appDir, ts);
@@ -227,35 +138,11 @@ async function setupZustand(projectPath, config) {
     const storeDir = storeDirFor(projectPath, config);
     fs.mkdirSync(storeDir, { recursive: true });
 
-    const ts = config.typescript;
-    const ext = ts ? "ts" : "js";
-    const contents = ts
-        ? `import { create } from "zustand";
-
-interface CounterState {
-  count: number;
-  increment: () => void;
-  decrement: () => void;
-  reset: () => void;
-}
-
-export const useCounterStore = create<CounterState>((set) => ({
-  count: 0,
-  increment: () => set((s) => ({ count: s.count + 1 })),
-  decrement: () => set((s) => ({ count: s.count - 1 })),
-  reset: () => set({ count: 0 }),
-}));
-`
-        : `import { create } from "zustand";
-
-export const useCounterStore = create((set) => ({
-  count: 0,
-  increment: () => set((s) => ({ count: s.count + 1 })),
-  decrement: () => set((s) => ({ count: s.count - 1 })),
-  reset: () => set({ count: 0 }),
-}));
-`;
-    fs.writeFileSync(path.join(storeDir, `useCounterStore.${ext}`), contents);
+    const ext = config.typescript ? "ts" : "js";
+    fs.writeFileSync(
+        path.join(storeDir, `useCounterStore.${ext}`),
+        readTemplate("zustand", `useCounterStore.${ext}`)
+    );
 }
 
 function patchLayoutWithProviders(appDir, ts) {
@@ -337,13 +224,8 @@ async function setupHusky(projectPath, config) {
     const hookCmd = config.typescript
         ? "npx tsc --noEmit && npx lint-staged"
         : "npx lint-staged";
-    const preCommit = `#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
-${hookCmd}
-`;
     const preCommitPath = path.join(huskyDir, "pre-commit");
-    fs.writeFileSync(preCommitPath, preCommit);
+    fs.writeFileSync(preCommitPath, readTemplate("husky", "pre-commit").replace("__HOOK_CMD__", hookCmd));
     fs.chmodSync(preCommitPath, 0o755);
 
     const jsGlob = config.typescript ? "*.{js,jsx,ts,tsx}" : "*.{js,jsx}";
@@ -356,31 +238,8 @@ ${hookCmd}
         JSON.stringify(lintStagedConfig, null, 2) + "\n"
     );
 
-    const prettierrc = {
-        semi: true,
-        singleQuote: false,
-        tabWidth: 2,
-        trailingComma: "es5",
-        printWidth: 100,
-        arrowParens: "always",
-        endOfLine: "lf",
-    };
-    fs.writeFileSync(path.join(projectPath, ".prettierrc"), JSON.stringify(prettierrc, null, 2) + "\n");
-
-    const prettierIgnore = [
-        "node_modules",
-        ".next",
-        "out",
-        "build",
-        "dist",
-        "coverage",
-        "package-lock.json",
-        "pnpm-lock.yaml",
-        "yarn.lock",
-        "bun.lockb",
-        "",
-    ].join("\n");
-    fs.writeFileSync(path.join(projectPath, ".prettierignore"), prettierIgnore);
+    fs.writeFileSync(path.join(projectPath, ".prettierrc"), readTemplate("husky", "prettierrc.json"));
+    fs.writeFileSync(path.join(projectPath, ".prettierignore"), readTemplate("husky", "prettierignore"));
 }
 
 // pnpm 11 defaults strictDepBuilds=true, so a later `pnpm install` in the
