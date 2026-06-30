@@ -386,32 +386,26 @@ ${hookCmd}
 // pnpm 11 defaults strictDepBuilds=true, so a later `pnpm install` in the
 // generated project hard-fails (ERR_PNPM_IGNORED_BUILDS) on unapproved
 // dependency build scripts that Next.js/shadcn pull in (sharp, unrs-resolver).
-// Persist an explicit decision so the user's own installs just work:
+// create-next-app's own pnpm install already drops a pnpm-workspace.yaml here
+// with placeholder values ("set this to true or false") that are meant to be
+// edited — so we replace it with an explicit, valid decision:
 //   - allowBuilds: <pkg>: false  -> a deliberate "don't run this build script"
-//     (the deps ship prebuilt binaries; nothing untrusted is executed), which
-//     keeps the file clean — pnpm won't inject "approve me" placeholders.
+//     (the deps ship prebuilt binaries; nothing untrusted is executed).
 //   - strictDepBuilds: false      -> catch-all so a future native dependency
 //     can't reintroduce the hard install failure.
-// pnpm 11 reads these from pnpm-workspace.yaml, not .npmrc.
-function writePnpmBuildConfig(projectPath) {
+// We overwrite rather than merge: this file's only role in a single-app project
+// is these settings, and appending risks duplicate keys (invalid YAML). pnpm 11
+// reads these from pnpm-workspace.yaml, not .npmrc.
+export function writePnpmBuildConfig(projectPath) {
     const wsPath = path.join(projectPath, "pnpm-workspace.yaml");
-    const settings = `strictDepBuilds: false
+    const contents = `# Let \`pnpm install\` succeed without failing on dependency build scripts.
+# See https://pnpm.io/settings#strictdepbuilds
+strictDepBuilds: false
 allowBuilds:
   sharp: false
   unrs-resolver: false
 `;
-    if (fs.existsSync(wsPath)) {
-        const existing = fs.readFileSync(wsPath, "utf8");
-        if (/^\s*strictDepBuilds\s*:/m.test(existing)) return;
-        const sep = existing.endsWith("\n") || existing === "" ? "" : "\n";
-        fs.appendFileSync(wsPath, `${sep}${settings}`);
-        return;
-    }
-    fs.writeFileSync(
-        wsPath,
-        `# Let \`pnpm install\` succeed without failing on dependency build scripts.\n` +
-            `# See https://pnpm.io/settings#strictdepbuilds\n${settings}`
-    );
+    fs.writeFileSync(wsPath, contents);
 }
 
 function installerFor(pm, dev = true) {
